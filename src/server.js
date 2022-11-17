@@ -16,19 +16,17 @@ const FactorTable = [
 
 const In_memory_Register = [];
 
-function calc_price({ dist_pav, dist_notpav, veiculo, carga }) {
+function calc_price(dist_pav, dist_notpav, id, carga) {
 
-    const factor = FactorTable.find((factor) => factor.veiculo == veiculo);
+    const factor = FactorTable.find((factor) => factor.id == id).fator;
+    const custo_total = ((dist_pav * cust_pav) + (dist_notpav * cust_notpav)) * factor;
 
-    const custo_total = (dist_pav * cust_pav) + (dist_notpav * cust_notpav) * factor.fator;
+    if (carga <= 5) return custo_total;
 
-    if (carga <= 5) {
-        return custo_total;
-    } else {
-        //(dist_pav + dist_notpav) * 0.03
-        const soma_dist = (dist_pav) + (dist_notpav) * 0.03;
-        return custo_total + soma_dist;
-    }
+    const acrescimo = (carga - 5) * 0.03;
+    const soma_dist = ((dist_pav) + (dist_notpav)) * acrescimo;
+    return custo_total + soma_dist;
+
 }
 
 //Atualizar o fator de multiplicação exemplificado na tabela 1 (post)
@@ -57,16 +55,16 @@ app.get('/factor/', (req, res) => {
 });
 
 //Criar um registro do exemplo da tabela 2 (obs: o custo total deve ser calculado pelaaplicação) (post)
-app.post('/register/', (req, res) => {
-    const { dist_pav, dist_notpav, veiculo, carga } = req.body;
+app.post('/register', (req, res) => {
+    const { dist_pav, dist_notpav, id, carga } = req.body;
 
-    const valor_total = calc_price(dist_pav, dist_notpav, veiculo, carga);
+    const valor_total = calc_price(dist_pav, dist_notpav, id, carga);
     const register = {
         dist_pav,
         dist_notpav,
-        veiculo,
+        veiculo: FactorTable.find((factor) => factor.id == id).veiculo,
         carga,
-        valor_total,
+        valor_total: valor_total.toFixed(2),
         id: In_memory_Register.length + 1
     }
 
@@ -76,14 +74,20 @@ app.post('/register/', (req, res) => {
 });
 
 //Atualizar um registro do exemplo da tabela 2 (obs: o custo total deve ser calculado pela aplicação) (put);
-app.put('/register/:id', (req, res) => {
+app.post('/register/:id', (req, res) => {
     const { id } = req.params;
-    const { dist_pav, dist_notpav, veiculo, carga } = req.body;
+    const { dist_pav, dist_notpav, factorId, carga } = req.body;
 
     const registerIndex = In_memory_Register.findIndex((register) => register.id == id);
-    const valor_total = calc_price(dist_pav, dist_notpav, veiculo, carga);
+    const valor_total = calc_price(dist_pav, dist_notpav, factorId, carga);
 
-    In_memory_Register[registerIndex] = { ...In_memory_Register[registerIndex], dist_pav, dist_notpav, veiculo, carga, valor_total };
+    In_memory_Register[registerIndex] = {
+        ...In_memory_Register[registerIndex],
+        dist_pav, dist_notpav,
+        veiculo: FactorTable.find((fator) => fator.id == factorId).veiculo,
+        carga,
+        valor_total: valor_total.toFixed(2),
+    };
 
     return res.json({ register: In_memory_Register[registerIndex], message: 'Register updated' });
 });
@@ -94,14 +98,22 @@ app.delete('/register/:id', (req, res) => {
 
     const registerIndex = In_memory_Register.findIndex((register) => register.id == id);
 
-    In_memory_Register.splice(registerIndex, 1);
+    if (registerIndex < 0) {
+        return res.json({ message: 'Register not found' });
+    }
+
+    const element_deleted = In_memory_Register.splice(registerIndex, 1);
+
+    if (!element_deleted.length) {
+        return res.json({ message: 'Register not deleted' });
+    }
 
     return res.json({ message: 'Register deleted' });
 });
 
 //Consultar todos os registros do exemplo da tabela 2(get);
 
-app.get('/register/', (req, res) => {
+app.get('/register', (req, res) => {
     const { search } = req.query;
 
     if (search) {
