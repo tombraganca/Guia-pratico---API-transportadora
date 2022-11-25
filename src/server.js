@@ -7,6 +7,14 @@ const templete = require('./templates/templeteEmail');
 const templateCustoEmail = require('./templates/templateCustoEmail');
 const ensureAuthenticated = require('./middleware/middleware');
 const jwt = require('jsonwebtoken');
+var log4js = require("log4js");
+log4js.configure({
+    appenders: { cheese: { type: "file", filename: `./logs/log.log` } },
+    categories: { default: { appenders: ["cheese"], level: "error" } },
+});
+var logger = log4js.getLogger();
+logger.level = "debug";
+
 
 const cust_pav = 0.63;
 const cust_notpav = 0.72;
@@ -45,7 +53,7 @@ app.post('/factor/:id', ensureAuthenticated, (req, res) => {
     const factorIndex = FactorTable.findIndex((factor) => factor.id == id);
 
     FactorTable[factorIndex] = { ...FactorTable[factorIndex], fator: newFactor };
-
+    logger.info("Factor updated.");
     return res.json({ FactorTable, message: 'Factor updated' });
 });
 
@@ -55,8 +63,11 @@ app.get('/factor/', ensureAuthenticated, (req, res) => {
 
     if (search) {
         const factor = FactorTable.filter((factor) => factor.veiculo.includes(search) || factor.id == Number(search));
+        logger.info(`factor findById ${search}`);
         return res.json(factor);
     }
+
+    logger.info("factor list");
     return res.json({ FactorTable });
 
 });
@@ -94,8 +105,10 @@ app.post('/register', ensureAuthenticated, (req, res) => {
             console.log(info);
             return res.json({ register, message: 'Register created and email sent' });
         });
+        logger.info("email sent");
     }
-
+    
+    logger.info("new register successfully created");
     return res.json({ register, message: 'Register created' });
 
 });
@@ -116,25 +129,30 @@ app.post('/register/:id', ensureAuthenticated, (req, res) => {
         valor_total: valor_total.toFixed(2),
     };
 
+    logger.info("register successfully updated");
     return res.json({ register: In_memory_Register[registerIndex], message: 'Register updated' });
 });
 
 //Deletar um registro do exemplo da tabela 2 (delete);
 app.delete('/register/:id', ensureAuthenticated, (req, res) => {
+    
     const { id } = req.params;
-
+    
     const registerIndex = In_memory_Register.findIndex((register) => register.id == id);
-
+    
     if (registerIndex < 0) {
+        logger.warn("register not found");
         return res.json({ message: 'Register not found' });
     }
-
+    
     const element_deleted = In_memory_Register.splice(registerIndex, 1);
-
+    
     if (!element_deleted.length) {
+        logger.warn("register not deleted");
         return res.json({ message: 'Register not deleted' });
     }
-
+    
+    logger.info("register successfully deleted");
     return res.json({ message: 'Register deleted' });
 });
 
@@ -147,6 +165,8 @@ app.get('/register', ensureAuthenticated, (req, res) => {
         const register = In_memory_Register.filter((register) => register.veiculo.includes(search) || register.id == Number(search));
         return res.json(register);
     }
+
+    logger.info("register successfully retrieved");
     return res.json({ In_memory_Register });
 
 });
@@ -157,12 +177,14 @@ app.post('/auth', async (req, res) => {
     const { email, senha } = req.body;
 
     if (!email || !senha) {
+        logger.warn("error sending email to a new operator.");
         return res.status(400).json({ message: 'Email or password not provided' });
     }
 
     const index = Operadores.findIndex((operador) => operador.email == email);
 
     if (index > 0) {
+        logger.warn("email field must be fulfilled.");
         return res.json({ message: 'Email inválido para cadastro' });
     }
 
@@ -177,27 +199,31 @@ app.post('/auth', async (req, res) => {
             subject: 'Bem vindo',
             html: templete
         })
+        logger.info("email operator sent successfully");
     } catch (err) {
+        logger.warn("error sending email to  a new operator.");
         console.log(err);
     }
 
+    logger.info("new Operator successfully created");
     return res.json({ message: 'Operador cadastrado com sucesso' });
 });
 
 //login de usuário
 app.post('/login', (req, res) => {
-    console.log(Operadores)
+ 
     const { email, senha } = req.body;
 
     const index = Operadores.findIndex((operador) => operador.email == email && operador.senha == senha);
 
     if (index < 0) {
+        logger.warn("Invalid logins attempts");
         return res.json({ message: 'Email ou senha inválidos' });
     }
 
     const token = jwt.sign({ id: Operadores[index].id }, process.env.TOKEN_SECRET, { expiresIn: '2h' });
-
-    return res.json({ email, senha, token });
+    logger.info("a Operator just logged in");
+    return res.json({ token });
 });
 
 
