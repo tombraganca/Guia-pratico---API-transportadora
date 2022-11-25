@@ -1,4 +1,5 @@
 const express = require('express');
+const { request } = require('http');
 const jwt = require('jsonwebtoken');
 
 const app = express();
@@ -24,13 +25,7 @@ const ensureAuthenticated = (req, res, next) => {
 
     const [, token] = authToken.split(' ');
     try {
-        const decoded = jwt.verify(token, 'secret');
-        const { sub } = decoded;
-
-        request.user = {
-            id: sub,
-        };
-
+        jwt.verify(token, process.env.TOKEN_SECRET);
         return next();
     } catch (err) {
         return res.status(401).json({ error: 'Invalid token' });

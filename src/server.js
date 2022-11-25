@@ -1,3 +1,6 @@
+require('dotenv').config()
+const {FactorTable, In_memory_Register, Operadores} = require('./database')
+
 const express = require('express');
 const nodemailer = require('nodemailer');
 const templete = require('./templates/templeteEmail');
@@ -11,25 +14,14 @@ const cust_notpav = 0.72;
 const app = express();
 app.use(express.json());
 
-const FactorTable = [
-    { "id": 1, "veiculo": "Veiculo Urbano", "fator": 1.0 },
-    { "id": 2, "veiculo": "Caminhao 3/4", "fator": 1.05 },
-    { "id": 3, "veiculo": "Caminhão toco", "fator": 1.08 },
-    { "id": 4, "veiculo": "Caminhão Simple", "fator": 1.13 },
-    { "id": 5, "veiculo": "Carreta eixo estendido", "fator": 1.19 },
-]
-
 const transport = nodemailer.createTransport({
-    host: "smtp.mailtrap.io",
-    port: 2525,
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
     auth: {
-        user: "248253e2ed7da9",
-        pass: "72696c6300e2de"
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
-
-const In_memory_Register = [];
-const Operadores = [];
 
 function calc_price(dist_pav, dist_notpav, id, carga) {
 
@@ -203,7 +195,7 @@ app.post('/login', (req, res) => {
         return res.json({ message: 'Email ou senha inválidos' });
     }
 
-    const token = jwt.sign({ id: Operadores[index].id }, 'teste', { expiresIn: '2h' });
+    const token = jwt.sign({ id: Operadores[index].id }, process.env.TOKEN_SECRET, { expiresIn: '2h' });
 
     return res.json({ email, senha, token });
 });
