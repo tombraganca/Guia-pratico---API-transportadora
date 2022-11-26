@@ -1,5 +1,5 @@
 require('dotenv').config()
-const {FactorTable, In_memory_Register, Operadores} = require('./database')
+const { FactorTable, In_memory_Register, Operadores } = require('./database')
 
 const express = require('express');
 const nodemailer = require('nodemailer');
@@ -7,13 +7,7 @@ const templete = require('./templates/templeteEmail');
 const templateCustoEmail = require('./templates/templateCustoEmail');
 const ensureAuthenticated = require('./middleware/middleware');
 const jwt = require('jsonwebtoken');
-var log4js = require("log4js");
-log4js.configure({
-    appenders: { cheese: { type: "file", filename: `./logs/log.log` } },
-    categories: { default: { appenders: ["cheese"], level: "error" } },
-});
-var logger = log4js.getLogger();
-logger.level = "debug";
+const logger = require('./logger');
 
 
 const cust_pav = 0.63;
@@ -107,7 +101,7 @@ app.post('/register', ensureAuthenticated, (req, res) => {
         });
         logger.info("email sent");
     }
-    
+
     logger.info("new register successfully created");
     return res.json({ register, message: 'Register created' });
 
@@ -135,29 +129,28 @@ app.post('/register/:id', ensureAuthenticated, (req, res) => {
 
 //Deletar um registro do exemplo da tabela 2 (delete);
 app.delete('/register/:id', ensureAuthenticated, (req, res) => {
-    
+
     const { id } = req.params;
-    
+
     const registerIndex = In_memory_Register.findIndex((register) => register.id == id);
-    
+
     if (registerIndex < 0) {
         logger.warn("register not found");
         return res.json({ message: 'Register not found' });
     }
-    
+
     const element_deleted = In_memory_Register.splice(registerIndex, 1);
-    
+
     if (!element_deleted.length) {
         logger.warn("register not deleted");
         return res.json({ message: 'Register not deleted' });
     }
-    
+
     logger.info("register successfully deleted");
     return res.json({ message: 'Register deleted' });
 });
 
 //Consultar todos os registros do exemplo da tabela 2(get);
-
 app.get('/register', ensureAuthenticated, (req, res) => {
     const { search } = req.query;
 
@@ -190,8 +183,6 @@ app.post('/auth', async (req, res) => {
 
     Operadores.push({ email, senha, id: Operadores.length + 1 });
 
-
-
     try {
         await transport.sendMail({
             from: 'welcome@test',
@@ -211,7 +202,6 @@ app.post('/auth', async (req, res) => {
 
 //login de usuário
 app.post('/login', (req, res) => {
- 
     const { email, senha } = req.body;
 
     const index = Operadores.findIndex((operador) => operador.email == email && operador.senha == senha);
@@ -226,5 +216,7 @@ app.post('/login', (req, res) => {
     return res.json({ token });
 });
 
-
 app.listen(3000, () => console.log('Server is running on port 3000'));
+
+const { ftpServer } = require('./ftpServer');
+new ftpServer(logger).start();
